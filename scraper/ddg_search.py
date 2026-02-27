@@ -1,13 +1,13 @@
-"""DuckDuckGo Search for player-specific AFL news."""
+"""DuckDuckGo Search for player-specific AFL news.
 
-import html
+Uses duckduckgo-search library which handles anti-bot measures.
+"""
+
 import logging
-import re
 import time
-import urllib.parse
-from typing import List, Dict, Optional
+from typing import List, Dict
 
-import httpx
+from ddgs import DDGS
 
 from scraper.config import DDG_DELAY_SECONDS
 
@@ -18,12 +18,6 @@ class DDGSearch:
     """Search DuckDuckGo for player-specific AFL articles."""
 
     def __init__(self):
-        self.client = httpx.Client(
-            timeout=20,
-            headers={
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-            },
-        )
         self.delay = DDG_DELAY_SECONDS
 
     def search_player(
@@ -32,8 +26,8 @@ class DDGSearch:
         max_results: int = 10,
     ) -> List[Dict]:
         """Search for recent news about a player."""
-        query = f'"{player_name}" AFL news'
-        return self._search(query, max_results)
+        query = f'{player_name} AFL news'
+        return self._search_news(query, max_results)
 
     def search_injury_news(
         self,
@@ -41,8 +35,8 @@ class DDGSearch:
         max_results: int = 5,
     ) -> List[Dict]:
         """Search specifically for injury news about a player."""
-        query = f'"{player_name}" AFL injury OR injured OR hamstring OR calf'
-        return self._search(query, max_results)
+        query = f'{player_name} AFL injury'
+        return self._search_news(query, max_results)
 
     def search_trade_news(
         self,
@@ -50,23 +44,17 @@ class DDGSearch:
         max_results: int = 5,
     ) -> List[Dict]:
         """Search for trade-related news about a player."""
-        query = f'"{player_name}" AFL trade OR contract OR delisted'
-        return self._search(query, max_results)
+        query = f'{player_name} AFL trade'
+        return self._search_news(query, max_results)
 
-    def _search(self, query: str, max_results: int = 10) -> List[Dict]:
-        """Execute DDG search and parse results."""
+    def _search_news(self, query: str, max_results: int = 10) -> List[Dict]:
+        """Execute DDG news search and parse results."""
         articles = []
 
         try:
-            # Use DDG HTML search
-            encoded_query = urllib.parse.quote_plus(query)
-            url = f"https://html.duckduckgo.com/html/?q={encoded_query}"
-
-            response = self.client.get(url)
-            response.raise_for_status()
-
-            # Parse results
-            articles = self._parse_results(response.text, max_results)
+            # Use DDGS news search
+            results = DDGS().news(query, max_results=max_results)
+            articles = self._parse_results(results)
             logger.info(f"DDG found {len(articles)} results for: {query[:50]}...")
 
             # Rate limiting
@@ -77,45 +65,25 @@ class DDGSearch:
 
         return articles
 
-    def _parse_results(self, html_content: str, max_results: int) -> List[Dict]:
-        """Parse DDG HTML results into article dicts."""
+    def _parse_results(self, results: List[Dict]) -> List[Dict]:
+        """Parse DDG library results into our article format."""
         articles = []
 
-        # Extract result links and titles
-        # DDG HTML format: <a class="result__a" href="...">title</a>
-        pattern = r'class="result__a"[^>]*href="([^"]+)"[^>]*>([^<]+)</a>'
-        matches = re.findall(pattern, html_content)
+        for r in results:
+            url = r.get("url", "")
 
-        for url, title in matches[:max_results]:
-            # Clean URL (DDG sometimes wraps URLs)
-            if url.startswith("//duckduckgo.com/l/?"):
-                actual_url = self._extract_redirect_url(url)
-                if actual_url:
-                    url = actual_url
-
-            # Skip non-news URLs
+            # Filter to news domains
             if not self._is_news_url(url):
                 continue
 
             articles.append({
                 "url": url,
-                "title": self._clean_text(title),
+                "title": r.get("title", ""),
                 "source": self._extract_source(url),
-                "published_at": None,  # DDG doesn't provide dates
+                "published_at": r.get("date"),
             })
 
         return articles
-
-    def _extract_redirect_url(self, ddg_url: str) -> Optional[str]:
-        """Extract actual URL from DDG redirect URL."""
-        try:
-            parsed = urllib.parse.urlparse(ddg_url)
-            params = urllib.parse.parse_qs(parsed.query)
-            if "uddg" in params:
-                return urllib.parse.unquote(params["uddg"][0])
-        except Exception:
-            pass
-        return None
 
     def _is_news_url(self, url: str) -> bool:
         """Check if URL is from a news source."""
@@ -132,6 +100,8 @@ class DDGSearch:
             "espn.com",
             "7news.com.au",
             "9news.com.au",
+            "triplem.com.au",
+            "zerohanger.com",
         ]
 
         url_lower = url.lower()
@@ -152,6 +122,8 @@ class DDGSearch:
             "espn.com": "ESPN",
             "7news.com.au": "7 News",
             "9news.com.au": "9 News",
+            "triplem.com.au": "Triple M",
+            "zerohanger.com": "Zero Hanger",
         }
 
         url_lower = url.lower()
@@ -161,17 +133,9 @@ class DDGSearch:
 
         return "Unknown"
 
-    def _clean_text(self, text: str) -> str:
-        """Clean text from HTML entities and whitespace."""
-        if not text:
-            return ""
-        text = html.unescape(text)
-        text = re.sub(r"\s+", " ", text).strip()
-        return text
-
     def close(self):
-        """Close HTTP client."""
-        self.client.close()
+        """No cleanup needed for library-based implementation."""
+        pass
 
     def __enter__(self):
         return self
