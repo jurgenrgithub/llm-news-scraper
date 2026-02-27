@@ -5,23 +5,8 @@ import os
 # API endpoint for article ingestion
 API_BASE_URL = os.getenv("API_BASE_URL", "http://192.168.6.75:8787")
 
-# RSS Feeds to monitor
+# RSS Feeds to monitor (verified working)
 RSS_FEEDS = [
-    {
-        "url": "https://www.afl.com.au/news/feed",
-        "source": "AFL.com.au",
-        "priority": 1,
-    },
-    {
-        "url": "https://www.foxsports.com.au/afl/rss",
-        "source": "Fox Sports",
-        "priority": 1,
-    },
-    {
-        "url": "https://www.heraldsun.com.au/sport/afl/rss",
-        "source": "Herald Sun",
-        "priority": 1,
-    },
     {
         "url": "https://www.theage.com.au/rss/sport/afl.xml",
         "source": "The Age",
@@ -30,13 +15,17 @@ RSS_FEEDS = [
     {
         "url": "https://www.abc.net.au/news/feed/2942460/rss.xml",
         "source": "ABC News",
-        "priority": 2,
+        "priority": 1,
     },
     {
-        "url": "https://www.sen.com.au/feed/",
-        "source": "SEN",
+        "url": "https://www.smh.com.au/rss/sport/afl.xml",
+        "source": "Sydney Morning Herald",
         "priority": 2,
     },
+    # Note: These feeds may need validation
+    # "https://www.afl.com.au/news/feed" - 404 as of Feb 2026
+    # "https://www.foxsports.com.au/afl/rss" - returns empty/invalid
+    # "https://www.heraldsun.com.au/sport/afl/rss" - paywall/invalid
 ]
 
 # DDG Search settings
