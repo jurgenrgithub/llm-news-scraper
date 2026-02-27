@@ -155,7 +155,10 @@ class AFLNewsScraper:
             )
             if response.status_code == 200:
                 data = response.json()
-                return [{"name": r["name"]} for r in data.get("results", [])]
+                results = [{"name": r["name"]} for r in data.get("results", [])]
+                if results:
+                    return results
+                # Empty results - fall through to hardcoded list
         except Exception as e:
             logger.warning(f"Could not fetch players from API: {e}")
 
