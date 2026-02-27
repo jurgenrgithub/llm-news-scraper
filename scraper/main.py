@@ -146,35 +146,19 @@ class AFLNewsScraper:
         return articles
 
     def _get_monitored_players(self) -> List[Dict]:
-        """Get list of players to search for."""
+        """Get list of players from API."""
         try:
-            # Try to get players with recent activity from API
             response = self.http.get(
-                f"{self.api_url}/entities/search",
-                params={"q": "player", "domain": "afl", "limit": 50}
+                f"{self.api_url}/entities",
+                params={"domain": "afl", "entity_type": "player", "limit": 50}
             )
             if response.status_code == 200:
                 data = response.json()
-                results = [{"name": r["name"]} for r in data.get("results", [])]
-                if results:
-                    return results
-                # Empty results - fall through to hardcoded list
+                return [{"name": e["name"]} for e in data.get("entities", [])]
         except Exception as e:
-            logger.warning(f"Could not fetch players from API: {e}")
+            logger.error(f"Could not fetch players from API: {e}")
 
-        # Fallback: hardcoded list of top players
-        return [
-            {"name": "Nick Daicos"},
-            {"name": "Marcus Bontempelli"},
-            {"name": "Errol Gulden"},
-            {"name": "Isaac Heeney"},
-            {"name": "Patrick Cripps"},
-            {"name": "Christian Petracca"},
-            {"name": "Zak Butters"},
-            {"name": "Chad Warner"},
-            {"name": "Lachie Neale"},
-            {"name": "Toby Greene"},
-        ]
+        return []
 
     def _dedupe_articles(self, articles: List[Dict]) -> List[Dict]:
         """Remove duplicate URLs."""
