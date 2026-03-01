@@ -22,6 +22,7 @@ from scraper.config import (
 from scraper.page_cache import PageCache
 from scraper.rss_monitor import RSSMonitor
 from scraper.ddg_search import DDGSearch
+from scraper.date_extractor import DateExtractor
 
 logger = logging.getLogger(__name__)
 
@@ -60,6 +61,7 @@ class CacheScraper:
 
     def __init__(self):
         self.cache = PageCache()
+        self.date_extractor = DateExtractor()
         self.http = httpx.Client(
             timeout=30,
             follow_redirects=True,
@@ -112,16 +114,21 @@ class CacheScraper:
                 stats["fetched"] += 1
 
                 if response.status_code == 200:
+                    # Extract article publication date from HTML
+                    published_at = self.date_extractor.extract(response.text)
+
                     page_id = self.cache.store(
                         url=url,
                         html=response.text,
                         source_type=url_info["source_type"],
                         source_name=url_info.get("source_name"),
                         http_status=response.status_code,
+                        published_at=published_at,
                     )
                     if page_id:
                         stats["cached"] += 1
-                        logger.info(f"  -> Cached (ID: {page_id})")
+                        date_str = published_at.strftime("%Y-%m-%d") if published_at else "no date"
+                        logger.info(f"  -> Cached (ID: {page_id}, {date_str})")
                     else:
                         logger.info(f"  -> Skipped (duplicate)")
                 else:

@@ -87,6 +87,7 @@ class PageCache:
         source_type: str,
         source_name: str = None,
         http_status: int = 200,
+        published_at=None,
     ) -> Optional[int]:
         """Store raw HTML page, return page_cache.id."""
         hash_url = url_hash(url)
@@ -97,8 +98,9 @@ class PageCache:
                 cursor.execute(
                     """INSERT INTO page_cache (
                         url, url_hash, raw_html, content_hash,
-                        source_type, source_name, http_status, content_length
-                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                        source_type, source_name, http_status, content_length,
+                        published_at
+                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
                     ON CONFLICT (url_hash) DO NOTHING
                     RETURNING id""",
                     (
@@ -110,6 +112,7 @@ class PageCache:
                         source_name,
                         http_status,
                         len(html),
+                        published_at,
                     )
                 )
                 result = cursor.fetchone()
