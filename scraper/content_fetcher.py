@@ -5,6 +5,7 @@ import logging
 import re
 from typing import Dict, Optional
 
+from bs4 import BeautifulSoup
 import httpx
 
 from scraper.config import FETCH_TIMEOUT
@@ -85,14 +86,25 @@ class ContentFetcher:
             return self._extract_generic(html)
 
     def _extract_afl_com(self, html: str) -> str:
-        """Extract from AFL.com.au articles."""
-        match = re.search(
-            r'<div[^>]*class="[^"]*article-body[^"]*"[^>]*>(.*?)</div>',
-            html, re.DOTALL | re.IGNORECASE
-        )
-        if match:
-            return self._html_to_text(match.group(1))
-        return self._extract_article_tag(html)
+        """Extract from AFL.com.au and club site articles using BeautifulSoup."""
+        soup = BeautifulSoup(html, "html.parser")
+
+        # Find article-body div (used by all AFL club sites)
+        body_div = soup.find("div", class_=lambda x: x and "article-body" in x)
+        if body_div:
+            # Remove script/style elements
+            for tag in body_div.find_all(["script", "style"]):
+                tag.decompose()
+            return body_div.get_text(separator=" ", strip=True)
+
+        # Fallback to article tag
+        article = soup.find("article")
+        if article:
+            for tag in article.find_all(["script", "style"]):
+                tag.decompose()
+            return article.get_text(separator=" ", strip=True)
+
+        return ""
 
     def _extract_foxsports(self, html: str) -> str:
         """Extract from Fox Sports articles."""
