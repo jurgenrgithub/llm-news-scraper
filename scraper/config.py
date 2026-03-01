@@ -68,9 +68,9 @@ FETCH_DELAY_SECONDS = float(os.getenv("FETCH_DELAY_SECONDS", "1.0"))
 # Logging
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 
-# Database config for page cache (internal vmbr_db network)
+# Database config for page cache
 DB_CONFIG = {
-    "host": os.getenv("LLM_NEWS_DB_HOST", "10.20.20.10"),
+    "host": os.getenv("LLM_NEWS_DB_HOST", "192.168.6.170"),
     "port": int(os.getenv("LLM_NEWS_DB_PORT", "5432")),
     "dbname": os.getenv("LLM_NEWS_DB_NAME", "llm_news"),
     "user": os.getenv("LLM_NEWS_DB_USER", "llm_news"),

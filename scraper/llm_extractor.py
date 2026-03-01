@@ -84,14 +84,14 @@ EXTRACTION_PROMPT = '''You are an AFL news analyst extracting player intelligenc
 
 Read the ARTICLE and extract every FANTASY-RELEVANT player mention. Output a JSON object:
 
-{
+{{
   "article_id": "{article_id}",
   "source": "{source_name}",
   "source_url": "{source_url}",
   "article_date": "{article_date}",
   "ingest_timestamp": "{ingest_timestamp}",
   "mentions": [
-    {
+    {{
       "player_id": null,
       "player": "Full Name",
       "team": "Team Name",
@@ -109,11 +109,11 @@ Read the ARTICLE and extract every FANTASY-RELEVANT player mention. Output a JSO
       "quote": "Key quote if any",
       "is_official_source": {is_official},
       "source_tier": "{source_tier}"
-    }
+    }}
   ],
   "errors": [],
   "processing_ms": 0
-}
+}}
 
 AVAILABILITY SCALE:
 - 0.0 = Ruled out, season over, delisted
