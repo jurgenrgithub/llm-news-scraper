@@ -7,7 +7,7 @@ import logging
 import time
 from typing import List, Dict
 
-from ddgs import DDGS
+from duckduckgo_search import DDGS
 
 from scraper.config import DDG_DELAY_SECONDS
 
