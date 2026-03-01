@@ -168,18 +168,29 @@ class LLMExtractor:
         """Get database connection."""
         return psycopg2.connect(**self.db_config)
 
-    def get_unprocessed_articles(self, limit: int = 10) -> List[Dict]:
+    def get_unprocessed_articles(self, limit: int = 10, days: int = None) -> List[Dict]:
         """Get articles that haven't been extracted yet."""
         with self.get_connection() as conn:
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
-                cur.execute("""
-                    SELECT id, url, raw_html, source_type, source_name, published_at
-                    FROM page_cache
-                    WHERE extracted_at IS NULL
-                      AND source_type != 'injury_list'
-                    ORDER BY published_at DESC NULLS LAST
-                    LIMIT %s
-                """, (limit,))
+                if days:
+                    cur.execute("""
+                        SELECT id, url, raw_html, source_type, source_name, published_at
+                        FROM page_cache
+                        WHERE extracted_at IS NULL
+                          AND source_type != 'injury_list'
+                          AND published_at >= NOW() - INTERVAL '%s days'
+                        ORDER BY published_at DESC NULLS LAST
+                        LIMIT %s
+                    """, (days, limit))
+                else:
+                    cur.execute("""
+                        SELECT id, url, raw_html, source_type, source_name, published_at
+                        FROM page_cache
+                        WHERE extracted_at IS NULL
+                          AND source_type != 'injury_list'
+                        ORDER BY published_at DESC NULLS LAST
+                        LIMIT %s
+                    """, (limit,))
                 return [dict(row) for row in cur.fetchall()]
 
     def get_article_by_id(self, article_id: int) -> Optional[Dict]:
@@ -420,7 +431,7 @@ class LLMExtractor:
                     """, (article_id,))
                 conn.commit()
 
-    def run(self, batch_size: int = 10, article_id: int = None):
+    def run(self, batch_size: int = 10, article_id: int = None, days: int = None):
         """Process articles through LLM extraction."""
         if article_id:
             # Single article mode
@@ -432,7 +443,7 @@ class LLMExtractor:
             articles = [article]
         else:
             # Batch mode
-            articles = self.get_unprocessed_articles(batch_size)
+            articles = self.get_unprocessed_articles(batch_size, days=days)
 
         if not articles:
             logger.info("No unprocessed articles found")
@@ -483,6 +494,7 @@ def main():
     parser = argparse.ArgumentParser(description="LLM Player Mention Extraction")
     parser.add_argument("--batch-size", type=int, default=10, help="Number of articles to process")
     parser.add_argument("--article-id", type=int, help="Process single article by ID")
+    parser.add_argument("--days", type=int, help="Only process articles from last N days")
     parser.add_argument("--verbose", "-v", action="store_true", help="Verbose logging")
     args = parser.parse_args()
 
@@ -493,7 +505,7 @@ def main():
 
     extractor = LLMExtractor()
     try:
-        extractor.run(batch_size=args.batch_size, article_id=args.article_id)
+        extractor.run(batch_size=args.batch_size, article_id=args.article_id, days=args.days)
     finally:
         extractor.close()
 
